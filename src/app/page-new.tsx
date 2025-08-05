@@ -1,16 +1,9 @@
-'use client';
-
-import dynamic from 'next/dynamic';
+import CanvasGame from '@/components/CanvasGame';
 import Logo from '@/components/Logo';
 import Greeting from '@/components/Greeting';
 import Portrait from '@/components/Portrait';
 import Bio from '@/components/Bio';
 import SocialIcons from '@/components/SocialIcons';
-
-// Dynamically import CanvasGame to avoid SSR issues
-const CanvasGame = dynamic(() => import('@/components/CanvasGame'), {
-  ssr: false,
-});
 
 export default function Home() {
   return (
