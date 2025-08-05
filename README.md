@@ -1,23 +1,29 @@
-# Yoav.xyz - Interactive Portfolio Landing Page
+# Yoav.xyz - Interactive Landing Page
 
-A modern, interactive portfolio landing page built with Next.js and Tailwind CSS, featuring a custom canvas game background and 3D portrait interactions.
+A modern, interactive Next.js landing page featuring animated components, 3D portrait interaction, and a custom canvas-based space game background.
 
-## Features
+## ✨ Features
 
-- **Interactive Canvas Game**: Background with stars, shooting stars, spaceship that follows mouse, and targets to shoot
-- **3D Portrait Interaction**: Drag/flick the portrait to spin it in 3D space with physics-based momentum
-- **Smooth Animations**: Entrance animations using Framer Motion
-- **Responsive Design**: Optimized for both desktop and mobile
-- **Modern Tech Stack**: Next.js 15, React 19, Tailwind CSS v4, TypeScript
+- **Responsive Design**: Works seamlessly on desktop and mobile devices
+- **Interactive 3D Portrait**: Drag/flick the circular portrait to spin it in 3D space with realistic physics
+- **Custom Canvas Game**: 
+  - Spaceship that follows your mouse/pointer
+  - Shoot projectiles by holding down mouse/touch
+  - Animated targets that slide in from screen edges
+  - Particle explosions when targets are hit
+  - Animated star field with parallax effects
+  - Shooting stars at random intervals
+- **Smooth Animations**: CSS-based entrance animations for all elements
+- **Modern Tech Stack**: Next.js 15, React 19, TypeScript, Tailwind CSS v4
 
-## Tech Stack
+## 🛠️ Tech Stack
 
-- **Framework**: Next.js 15 (App Router)
-- **Styling**: Tailwind CSS v4
-- **Animations**: Framer Motion
-- **Typography**: Roboto Mono (Google Fonts)
-- **Language**: TypeScript
-- **Package Manager**: PNPM
+- **Framework**: Next.js 15.4.5 with App Router
+- **Frontend**: React 19.1.0, TypeScript
+- **Styling**: Tailwind CSS v4 with custom animations
+- **Font**: Roboto Mono (Google Fonts)
+- **Package Manager**: pnpm
+- **Deployment**: Optimized for Vercel
 
 ## Getting Started
 

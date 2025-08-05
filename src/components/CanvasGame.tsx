@@ -29,6 +29,11 @@ interface Target {
   x: number;
   y: number;
   radius: number;
+  animationProgress: number; // 0 to 1 for entrance animation
+  sourceX: number; // Where it came from
+  sourceY: number; // Where it came from
+  targetX: number; // Final destination X
+  targetY: number; // Final destination Y
 }
 
 interface Particle {
@@ -125,10 +130,43 @@ export default function CanvasGame() {
 
   // Create target
   const createTarget = useCallback((canvas: HTMLCanvasElement) => {
+    // Choose a random side to spawn from
+    const side = Math.floor(Math.random() * 4); // 0: top, 1: right, 2: bottom, 3: left
+    let sourceX, sourceY, targetX, targetY;
+    
+    const margin = 40;
+    
+    // Final target position
+    targetX = Math.random() * (canvas.width - margin * 2) + margin;
+    targetY = Math.random() * (canvas.height - margin * 2) + margin;
+    
+    switch (side) {
+      case 0: // top
+        sourceX = targetX;
+        sourceY = -50;
+        break;
+      case 1: // right
+        sourceX = canvas.width + 50;
+        sourceY = targetY;
+        break;
+      case 2: // bottom
+        sourceX = targetX;
+        sourceY = canvas.height + 50;
+        break;
+      default: // left
+        sourceX = -50;
+        sourceY = targetY;
+    }
+    
     gameStateRef.current.targets.push({
-      x: Math.random() * (canvas.width - 80) + 40,
-      y: Math.random() * (canvas.height - 80) + 40,
+      x: sourceX, // Start at source position
+      y: sourceY, // Start at source position
       radius: 20,
+      animationProgress: 0,
+      sourceX,
+      sourceY,
+      targetX, // Store final position
+      targetY, // Store final position
     });
   }, []);
 
@@ -153,10 +191,10 @@ export default function CanvasGame() {
     const state = gameStateRef.current;
 
     // Update spaceship position with smooth following
-    state.spaceship.x = lerp(state.spaceship.x, state.spaceship.targetX, 0.02);
-    state.spaceship.y = lerp(state.spaceship.y, state.spaceship.targetY, 0.02);
+    state.spaceship.x = lerp(state.spaceship.x, state.spaceship.targetX, 0.05); // Increased speed
+    state.spaceship.y = lerp(state.spaceship.y, state.spaceship.targetY, 0.05); // Increased speed
 
-    // Update spaceship rotation
+    // Update spaceship rotation to point toward target
     const dx = state.spaceship.targetX - state.spaceship.x;
     const dy = state.spaceship.targetY - state.spaceship.y;
     const targetAngle = Math.atan2(dy, dx);
@@ -166,7 +204,7 @@ export default function CanvasGame() {
     while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
     while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
     
-    state.spaceship.angle += angleDiff * 0.05;
+    state.spaceship.angle += angleDiff * 0.1; // Increased rotation speed
 
     // Update stars (slow drift)
     state.stars.forEach(star => {
@@ -212,6 +250,17 @@ export default function CanvasGame() {
       }
     });
 
+    // Update targets (animate entrance)
+    state.targets.forEach((target, index) => {
+      if (target.animationProgress < 1) {
+        target.animationProgress += 0.02; // Animation speed
+        
+        // Lerp from source to target position
+        target.x = lerp(target.sourceX, target.targetX, target.animationProgress);
+        target.y = lerp(target.sourceY, target.targetY, target.animationProgress);
+      }
+    });
+
     // Check collisions
     state.projectiles.forEach((projectile, pIndex) => {
       state.targets.forEach((target, tIndex) => {
@@ -237,11 +286,14 @@ export default function CanvasGame() {
     }
 
     // Shooting
-    if (state.isShooting && currentTime - state.lastShot > 200) {
-      const speed = 8;
+    if (state.isShooting && currentTime - state.lastShot > 150) { // Faster shooting
+      const speed = 10; // Faster projectiles
+      const shootX = state.spaceship.x + Math.cos(state.spaceship.angle) * 15; // Shoot from nose
+      const shootY = state.spaceship.y + Math.sin(state.spaceship.angle) * 15; // Shoot from nose
+      
       state.projectiles.push({
-        x: state.spaceship.x,
-        y: state.spaceship.y,
+        x: shootX,
+        y: shootY,
         vx: Math.cos(state.spaceship.angle) * speed,
         vy: Math.sin(state.spaceship.angle) * speed,
       });
@@ -281,14 +333,22 @@ export default function CanvasGame() {
     ctx.save();
     ctx.translate(state.spaceship.x, state.spaceship.y);
     ctx.rotate(state.spaceship.angle);
+    
+    // Draw spaceship body
     ctx.fillStyle = '#3B82F6';
     ctx.beginPath();
-    ctx.moveTo(10, 0);
-    ctx.lineTo(-8, -6);
-    ctx.lineTo(-5, 0);
-    ctx.lineTo(-8, 6);
+    ctx.moveTo(15, 0);  // Nose of the ship
+    ctx.lineTo(-10, -8); // Top wing
+    ctx.lineTo(-6, 0);   // Body center
+    ctx.lineTo(-10, 8);  // Bottom wing
     ctx.closePath();
     ctx.fill();
+    
+    // Draw spaceship outline for better visibility
+    ctx.strokeStyle = '#60A5FA';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    
     ctx.restore();
 
     // Render projectiles
@@ -300,12 +360,29 @@ export default function CanvasGame() {
     });
 
     // Render targets
-    state.targets.forEach(target => {
+    state.targets.forEach((target) => {
+      const alpha = Math.min(target.animationProgress, 1);
+      const scale = Math.min(target.animationProgress * 1.2, 1); // Slight scale animation
+      
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(target.x, target.y);
+      ctx.scale(scale, scale);
+      
       ctx.strokeStyle = '#60A5FA';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(target.x, target.y, target.radius, 0, Math.PI * 2);
+      ctx.arc(0, 0, target.radius, 0, Math.PI * 2);
       ctx.stroke();
+      
+      // Add a pulsing inner circle
+      ctx.strokeStyle = '#93C5FD';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(0, 0, target.radius * 0.6, 0, Math.PI * 2);
+      ctx.stroke();
+      
+      ctx.restore();
     });
 
     // Render particles
@@ -334,7 +411,7 @@ export default function CanvasGame() {
   }, [update, render]);
 
   // Handle mouse/touch events
-  const handlePointerMove = useCallback((e: PointerEvent) => {
+  const handlePointerMove = useCallback((e: any) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -342,10 +419,13 @@ export default function CanvasGame() {
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
     
-    gameStateRef.current.mouseX = (e.clientX - rect.left) * scaleX;
-    gameStateRef.current.mouseY = (e.clientY - rect.top) * scaleY;
-    gameStateRef.current.spaceship.targetX = gameStateRef.current.mouseX;
-    gameStateRef.current.spaceship.targetY = gameStateRef.current.mouseY;
+    const mouseX = (e.clientX - rect.left) * scaleX;
+    const mouseY = (e.clientY - rect.top) * scaleY;
+    
+    gameStateRef.current.mouseX = mouseX;
+    gameStateRef.current.mouseY = mouseY;
+    gameStateRef.current.spaceship.targetX = mouseX;
+    gameStateRef.current.spaceship.targetY = mouseY;
   }, []);
 
   const handlePointerDown = useCallback(() => {
@@ -394,6 +474,13 @@ export default function CanvasGame() {
     canvas.addEventListener('pointerdown', handlePointerDown);
     canvas.addEventListener('pointerup', handlePointerUp);
     canvas.addEventListener('pointerleave', handlePointerUp);
+    
+    // Also add mouse event listeners for better compatibility
+    canvas.addEventListener('mousemove', handlePointerMove);
+    canvas.addEventListener('mousedown', handlePointerDown);
+    canvas.addEventListener('mouseup', handlePointerUp);
+    canvas.addEventListener('mouseleave', handlePointerUp);
+    
     window.addEventListener('resize', handleResize);
 
     // Start game loop
@@ -408,6 +495,13 @@ export default function CanvasGame() {
       canvas.removeEventListener('pointerdown', handlePointerDown);
       canvas.removeEventListener('pointerup', handlePointerUp);
       canvas.removeEventListener('pointerleave', handlePointerUp);
+      
+      // Remove mouse event listeners
+      canvas.removeEventListener('mousemove', handlePointerMove);
+      canvas.removeEventListener('mousedown', handlePointerDown);
+      canvas.removeEventListener('mouseup', handlePointerUp);
+      canvas.removeEventListener('mouseleave', handlePointerUp);
+      
       window.removeEventListener('resize', handleResize);
     };
   }, [gameLoop, handlePointerMove, handlePointerDown, handlePointerUp, handleResize, initializeStars]);

@@ -13,22 +13,32 @@ export default function Portrait() {
 
   const applyFriction = useCallback(() => {
     setVelocity(prev => ({
-      x: prev.x * 0.95,
-      y: prev.y * 0.95,
+      x: prev.x * 0.98, // Slower friction for more spinning time
+      y: prev.y * 0.98,
     }));
 
-    setRotation(prev => ({
-      x: prev.x + velocity.x,
-      y: prev.y + velocity.y,
-    }));
+    setRotation(prev => {
+      const newRotation = {
+        x: prev.x + velocity.x,
+        y: prev.y + velocity.y,
+      };
+      
+      // When velocity is very low, slowly return to original position
+      if (Math.abs(velocity.x) < 0.5 && Math.abs(velocity.y) < 0.5) {
+        newRotation.x = prev.x * 0.95; // Slowly return to 0
+        newRotation.y = prev.y * 0.95; // Slowly return to 0
+      }
+      
+      return newRotation;
+    });
 
-    if (Math.abs(velocity.x) > 0.1 || Math.abs(velocity.y) > 0.1) {
+    if (Math.abs(velocity.x) > 0.05 || Math.abs(velocity.y) > 0.05 || Math.abs(rotation.x) > 1 || Math.abs(rotation.y) > 1) {
       animationFrameRef.current = requestAnimationFrame(applyFriction);
     }
-  }, [velocity.x, velocity.y]);
+  }, [velocity.x, velocity.y, rotation.x, rotation.y]);
 
   useEffect(() => {
-    if (!isDragging && (Math.abs(velocity.x) > 0.1 || Math.abs(velocity.y) > 0.1)) {
+    if (!isDragging && (Math.abs(velocity.x) > 0.05 || Math.abs(velocity.y) > 0.05 || Math.abs(rotation.x) > 1 || Math.abs(rotation.y) > 1)) {
       animationFrameRef.current = requestAnimationFrame(applyFriction);
     }
     
@@ -37,7 +47,7 @@ export default function Portrait() {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isDragging, velocity, applyFriction]);
+  }, [isDragging, velocity, rotation, applyFriction]);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     setIsDragging(true);
@@ -57,13 +67,13 @@ export default function Portrait() {
     const deltaY = e.clientY - lastPointer.y;
 
     setVelocity({
-      x: deltaY * 0.5, // Vertical mouse movement rotates around X axis
-      y: deltaX * 0.5, // Horizontal mouse movement rotates around Y axis
+      x: deltaY * 0.8, // Increased sensitivity for more responsive spinning
+      y: deltaX * 0.8, // Increased sensitivity for more responsive spinning
     });
 
     setRotation(prev => ({
-      x: prev.x + deltaY * 0.5,
-      y: prev.y + deltaX * 0.5,
+      x: prev.x + deltaY * 0.8,
+      y: prev.y + deltaX * 0.8,
     }));
 
     setLastPointer({ x: e.clientX, y: e.clientY });
@@ -74,7 +84,7 @@ export default function Portrait() {
     e.currentTarget.releasePointerCapture(e.pointerId);
     
     // Start friction animation
-    if (Math.abs(velocity.x) > 0.1 || Math.abs(velocity.y) > 0.1) {
+    if (Math.abs(velocity.x) > 0.05 || Math.abs(velocity.y) > 0.05) {
       animationFrameRef.current = requestAnimationFrame(applyFriction);
     }
   }, [velocity, applyFriction]);

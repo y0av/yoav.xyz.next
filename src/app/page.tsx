@@ -22,8 +22,8 @@ export default function Home() {
       <Logo />
       
       {/* Main content centered */}
-      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4">
-        <div className="flex flex-col items-center justify-center space-y-6">
+      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4 pointer-events-none">
+        <div className="flex flex-col items-center justify-center space-y-6 pointer-events-auto">
           {/* Greeting text */}
           <Greeting />
           
