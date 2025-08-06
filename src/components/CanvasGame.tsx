@@ -190,13 +190,21 @@ export default function CanvasGame() {
   const update = useCallback((canvas: HTMLCanvasElement, currentTime: number) => {
     const state = gameStateRef.current;
 
-    // Update spaceship position with smooth following
-    state.spaceship.x = lerp(state.spaceship.x, state.spaceship.targetX, 0.008); // Much slower movement
-    state.spaceship.y = lerp(state.spaceship.y, state.spaceship.targetY, 0.008); // Much slower movement
-
-    // Update spaceship rotation to point toward target
+    // Update spaceship position with constant slow speed
     const dx = state.spaceship.targetX - state.spaceship.x;
     const dy = state.spaceship.targetY - state.spaceship.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    if (dist > 1) { // Only move if not very close to target
+      const speed = 1; // Constant slow speed
+      const moveX = (dx / dist) * speed;
+      const moveY = (dy / dist) * speed;
+      
+      state.spaceship.x += moveX;
+      state.spaceship.y += moveY;
+    }
+
+    // Update spaceship rotation to point toward target (faster rotation)
     const targetAngle = Math.atan2(dy, dx);
     let angleDiff = targetAngle - state.spaceship.angle;
     
@@ -204,7 +212,7 @@ export default function CanvasGame() {
     while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
     while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
     
-    state.spaceship.angle += angleDiff * 0.03; // Slower rotation too
+    state.spaceship.angle += angleDiff * 0.1;
 
     // Update stars (slow drift)
     state.stars.forEach(star => {
@@ -250,10 +258,10 @@ export default function CanvasGame() {
       }
     });
 
-    // Update targets (animate entrance)
+    // Update targets (animate entrance slowly)
     state.targets.forEach((target, index) => {
       if (target.animationProgress < 1) {
-        target.animationProgress += 0.02; // Animation speed
+        target.animationProgress += 0.01; // Slower animation speed
         
         // Lerp from source to target position
         target.x = lerp(target.sourceX, target.targetX, target.animationProgress);
@@ -279,8 +287,8 @@ export default function CanvasGame() {
       state.lastShootingStar = currentTime;
     }
 
-    // Spawn targets
-    if (currentTime - state.lastTarget > Math.random() * 2000 + 3000) {
+    // Spawn targets (limit to 4 maximum)
+    if (state.targets.length < 4 && currentTime - state.lastTarget > Math.random() * 3000 + 3000) {
       createTarget(canvas);
       state.lastTarget = currentTime;
     }
@@ -447,11 +455,11 @@ export default function CanvasGame() {
     // Re-initialize stars for new canvas size
     initializeStars(canvas);
     
-    // Reset spaceship position
-    gameStateRef.current.spaceship.x = canvas.width / 2;
-    gameStateRef.current.spaceship.y = canvas.height / 2;
-    gameStateRef.current.spaceship.targetX = canvas.width / 2;
-    gameStateRef.current.spaceship.targetY = canvas.height / 2;
+    // Reset spaceship position to lower right
+    gameStateRef.current.spaceship.x = canvas.width - 100;
+    gameStateRef.current.spaceship.y = canvas.height - 100;
+    gameStateRef.current.spaceship.targetX = canvas.width - 100;
+    gameStateRef.current.spaceship.targetY = canvas.height - 100;
   }, [initializeStars]);
 
   useEffect(() => {
@@ -464,10 +472,10 @@ export default function CanvasGame() {
 
     // Initialize game state
     initializeStars(canvas);
-    gameStateRef.current.spaceship.x = canvas.width / 2;
-    gameStateRef.current.spaceship.y = canvas.height / 2;
-    gameStateRef.current.spaceship.targetX = canvas.width / 2;
-    gameStateRef.current.spaceship.targetY = canvas.height / 2;
+    gameStateRef.current.spaceship.x = canvas.width - 100;
+    gameStateRef.current.spaceship.y = canvas.height - 100;
+    gameStateRef.current.spaceship.targetX = canvas.width - 100;
+    gameStateRef.current.spaceship.targetY = canvas.height - 100;
 
     // Add event listeners
     canvas.addEventListener('pointermove', handlePointerMove);
