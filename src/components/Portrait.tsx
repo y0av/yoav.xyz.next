@@ -86,7 +86,12 @@ export default function Portrait() {
       cancelAnimationFrame(animationFrameRef.current);
     }
     
-    e.currentTarget.setPointerCapture(e.pointerId);
+    // Safely set pointer capture
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (error) {
+      // Ignore invalid pointer id errors
+    }
   }, []);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
@@ -110,7 +115,13 @@ export default function Portrait() {
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
     setIsDragging(false);
-    e.currentTarget.releasePointerCapture(e.pointerId);
+    
+    // Safely release pointer capture
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch (error) {
+      // Ignore invalid pointer id errors
+    }
     
     // Start friction animation if there's velocity
     if (Math.abs(velocity.x) > 0.05 || Math.abs(velocity.y) > 0.05) {
