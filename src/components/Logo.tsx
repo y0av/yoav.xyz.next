@@ -4,7 +4,7 @@ import Image from 'next/image';
 
 export default function Logo() {
   return (
-    <div className="fixed top-4 left-4 z-10">
+    <div className="fixed top-4 left-4 z-10 pointer-events-none">
       <Image
         src="/logo.svg"
         alt="Logo"

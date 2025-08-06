@@ -38,7 +38,7 @@ export default function SocialIcons() {
   ];
 
   return (
-    <div className="flex gap-6 justify-center">
+    <div className="flex gap-6 justify-center pointer-events-auto">
       {socialLinks.map((link, index) => (
         <a
           key={link.label}

@@ -23,7 +23,7 @@ export default function Home() {
       
       {/* Main content centered */}
       <main className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4 pointer-events-none">
-        <div className="flex flex-col items-center justify-center space-y-6 pointer-events-auto">
+        <div className="flex flex-col items-center justify-center space-y-6">
           {/* Greeting text */}
           <Greeting />
           

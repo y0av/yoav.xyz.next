@@ -2,7 +2,7 @@
 
 export default function Greeting() {
   return (
-    <div className="text-center mb-8 animate-slide-down">
+    <div className="text-center mb-8 animate-slide-down pointer-events-none">
       <h1 className="text-4xl lg:text-6xl font-bold text-gray-100 mb-2 tracking-wide drop-shadow-lg">
         Hi!
       </h1>

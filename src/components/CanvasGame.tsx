@@ -191,8 +191,8 @@ export default function CanvasGame() {
     const state = gameStateRef.current;
 
     // Update spaceship position with smooth following
-    state.spaceship.x = lerp(state.spaceship.x, state.spaceship.targetX, 0.05); // Increased speed
-    state.spaceship.y = lerp(state.spaceship.y, state.spaceship.targetY, 0.05); // Increased speed
+    state.spaceship.x = lerp(state.spaceship.x, state.spaceship.targetX, 0.008); // Much slower movement
+    state.spaceship.y = lerp(state.spaceship.y, state.spaceship.targetY, 0.008); // Much slower movement
 
     // Update spaceship rotation to point toward target
     const dx = state.spaceship.targetX - state.spaceship.x;
@@ -204,7 +204,7 @@ export default function CanvasGame() {
     while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
     while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
     
-    state.spaceship.angle += angleDiff * 0.1; // Increased rotation speed
+    state.spaceship.angle += angleDiff * 0.03; // Slower rotation too
 
     // Update stars (slow drift)
     state.stars.forEach(star => {

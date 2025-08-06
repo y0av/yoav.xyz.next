@@ -90,7 +90,7 @@ export default function Portrait() {
   }, [velocity, applyFriction]);
 
   return (
-    <div className="mb-8 perspective-1000 animate-spin-in animate-delay-400">
+    <div className="mb-8 perspective-1000 animate-spin-in animate-delay-400 pointer-events-auto">
       <div
         ref={imageRef}
         className="relative w-32 h-32 lg:w-40 lg:h-40 mx-auto cursor-grab active:cursor-grabbing select-none"
