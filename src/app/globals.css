@@ -72,20 +72,34 @@ html, body {
 }
 
 .animate-slide-down {
-  animation: slideDown 1.2s ease-out forwards;
+  animation: slideDown 1.2s ease-out both;
+  opacity: 0; /* hidden until animation progresses */
 }
 
 .animate-slide-up {
-  animation: slideUp 1.2s ease-out forwards;
+  animation: slideUp 1.2s ease-out both;
+  opacity: 0; /* hidden until animation progresses */
 }
 
 .animate-spin-in {
-  animation: spinIn 1.6s ease-out forwards;
+  animation: spinIn 1.6s ease-out both;
+  opacity: 0; /* hidden until animation progresses */
 }
 
 .animate-bounce-in {
   animation: bounceIn 0.9s ease-out forwards;
   opacity: 0;
+}
+
+/* Accessibility: if user prefers reduced motion, show elements immediately */
+@media (prefers-reduced-motion: reduce) {
+  .animate-slide-down,
+  .animate-slide-up,
+  .animate-spin-in,
+  .animate-bounce-in {
+    animation: none !important;
+    opacity: 1 !important;
+  }
 }
 
 .animate-delay-200 {
