@@ -15,8 +15,8 @@ const CanvasGame = dynamic(() => import('@/components/CanvasGame'), {
 export default function Home() {
   return (
     <div className="relative min-h-screen overflow-hidden bg-gray-800">
-      {/* Interactive Background Canvas */}
-      <CanvasGame />
+  {/* Interactive Background Canvas */}
+  <CanvasGame targetGoal={100} redirectPath="/guestbook" />
       
       {/* Logo in top-left corner */}
       <Logo />
