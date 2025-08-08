@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface Star {
   x: number;
@@ -53,9 +54,23 @@ interface Spaceship {
   angle: number;
 }
 
-export default function CanvasGame() {
+type CanvasGameMode = 'game' | 'starsOnly';
+
+interface CanvasGameProps {
+  mode?: CanvasGameMode; // 'game' renders full game, 'starsOnly' renders background stars only
+  targetGoal?: number;   // how many targets to pop before redirect
+  redirectPath?: string; // where to redirect once goal is reached
+}
+
+export default function CanvasGame({
+  mode = 'game',
+  targetGoal = 100,
+  redirectPath = '/guestbook',
+}: CanvasGameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const redirectedRef = useRef(false);
+  const router = useRouter();
   const gameStateRef = useRef({
     stars: [] as Star[],
     shootingStars: [] as ShootingStar[],
@@ -69,6 +84,7 @@ export default function CanvasGame() {
     lastShot: 0,
     lastShootingStar: 0,
     lastTarget: 0,
+    killed: 0,
   });
 
   // Vector math utilities
@@ -191,28 +207,30 @@ export default function CanvasGame() {
     const state = gameStateRef.current;
 
     // Update spaceship position with constant slow speed
-    const dx = state.spaceship.targetX - state.spaceship.x;
-    const dy = state.spaceship.targetY - state.spaceship.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    
-    if (dist > 1) { // Only move if not very close to target
-      const speed = 1; // Constant slow speed
-      const moveX = (dx / dist) * speed;
-      const moveY = (dy / dist) * speed;
+    if (mode === 'game') {
+      const dx = state.spaceship.targetX - state.spaceship.x;
+      const dy = state.spaceship.targetY - state.spaceship.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
       
-      state.spaceship.x += moveX;
-      state.spaceship.y += moveY;
-    }
+      if (dist > 1) { // Only move if not very close to target
+        const speed = 1; // Constant slow speed
+        const moveX = (dx / dist) * speed;
+        const moveY = (dy / dist) * speed;
+        
+        state.spaceship.x += moveX;
+        state.spaceship.y += moveY;
+      }
 
-    // Update spaceship rotation to point toward target (faster rotation)
-    const targetAngle = Math.atan2(dy, dx);
-    let angleDiff = targetAngle - state.spaceship.angle;
-    
-    // Normalize angle difference
-    while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-    while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-    
-    state.spaceship.angle += angleDiff * 0.1;
+      // Update spaceship rotation to point toward target (faster rotation)
+      const targetAngle = Math.atan2(dy, dx);
+      let angleDiff = targetAngle - state.spaceship.angle;
+      
+      // Normalize angle difference
+      while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+      while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+      
+      state.spaceship.angle += angleDiff * 0.1;
+    }
 
     // Update stars (slow drift)
     state.stars.forEach(star => {
@@ -236,16 +254,18 @@ export default function CanvasGame() {
       }
     });
 
-    // Update projectiles
-    state.projectiles.forEach((projectile, index) => {
-      projectile.x += projectile.vx;
-      projectile.y += projectile.vy;
-      
-      if (projectile.x < 0 || projectile.x > canvas.width ||
-          projectile.y < 0 || projectile.y > canvas.height) {
-        state.projectiles.splice(index, 1);
-      }
-    });
+    if (mode === 'game') {
+      // Update projectiles
+      state.projectiles.forEach((projectile, index) => {
+        projectile.x += projectile.vx;
+        projectile.y += projectile.vy;
+        
+        if (projectile.x < 0 || projectile.x > canvas.width ||
+            projectile.y < 0 || projectile.y > canvas.height) {
+          state.projectiles.splice(index, 1);
+        }
+      });
+    }
 
     // Update particles
     state.particles.forEach((particle, index) => {
@@ -258,28 +278,37 @@ export default function CanvasGame() {
       }
     });
 
-    // Update targets (animate entrance slowly)
-    state.targets.forEach((target, index) => {
-      if (target.animationProgress < 1) {
-        target.animationProgress += 0.01; // Slower animation speed
-        
-        // Lerp from source to target position
-        target.x = lerp(target.sourceX, target.targetX, target.animationProgress);
-        target.y = lerp(target.sourceY, target.targetY, target.animationProgress);
-      }
-    });
-
-    // Check collisions
-    state.projectiles.forEach((projectile, pIndex) => {
-      state.targets.forEach((target, tIndex) => {
-        const dist = distance(projectile.x, projectile.y, target.x, target.y);
-        if (dist < target.radius) {
-          createExplosion(target.x, target.y);
-          state.projectiles.splice(pIndex, 1);
-          state.targets.splice(tIndex, 1);
+    if (mode === 'game') {
+      // Update targets (animate entrance slowly)
+      state.targets.forEach((target, index) => {
+        if (target.animationProgress < 1) {
+          target.animationProgress += 0.01; // Slower animation speed
+          
+          // Lerp from source to target position
+          target.x = lerp(target.sourceX, target.targetX, target.animationProgress);
+          target.y = lerp(target.sourceY, target.targetY, target.animationProgress);
         }
       });
-    });
+    }
+
+    if (mode === 'game') {
+      // Check collisions
+      // Note: iterate backwards to avoid index issues when splicing
+      for (let pIndex = state.projectiles.length - 1; pIndex >= 0; pIndex--) {
+        const projectile = state.projectiles[pIndex];
+        for (let tIndex = state.targets.length - 1; tIndex >= 0; tIndex--) {
+          const target = state.targets[tIndex];
+          const distToTarget = distance(projectile.x, projectile.y, target.x, target.y);
+          if (distToTarget < target.radius) {
+            createExplosion(target.x, target.y);
+            state.projectiles.splice(pIndex, 1);
+            state.targets.splice(tIndex, 1);
+            state.killed += 1;
+            break;
+          }
+        }
+      }
+    }
 
     // Spawn shooting stars
     if (currentTime - state.lastShootingStar > Math.random() * 10000 + 5000) {
@@ -287,25 +316,27 @@ export default function CanvasGame() {
       state.lastShootingStar = currentTime;
     }
 
-    // Spawn targets (limit to 4 maximum)
-    if (state.targets.length < 4 && currentTime - state.lastTarget > Math.random() * 3000 + 3000) {
-      createTarget(canvas);
-      state.lastTarget = currentTime;
-    }
+    if (mode === 'game') {
+      // Spawn targets (limit to 4 maximum)
+      if (state.targets.length < 4 && currentTime - state.lastTarget > Math.random() * 3000 + 3000) {
+        createTarget(canvas);
+        state.lastTarget = currentTime;
+      }
 
-    // Shooting
-    if (state.isShooting && currentTime - state.lastShot > 150) { // Faster shooting
-      const speed = 10; // Faster projectiles
-      const shootX = state.spaceship.x + Math.cos(state.spaceship.angle) * 15; // Shoot from nose
-      const shootY = state.spaceship.y + Math.sin(state.spaceship.angle) * 15; // Shoot from nose
-      
-      state.projectiles.push({
-        x: shootX,
-        y: shootY,
-        vx: Math.cos(state.spaceship.angle) * speed,
-        vy: Math.sin(state.spaceship.angle) * speed,
-      });
-      state.lastShot = currentTime;
+      // Shooting
+      if (state.isShooting && currentTime - state.lastShot > 150) { // Faster shooting
+        const speed = 10; // Faster projectiles
+        const shootX = state.spaceship.x + Math.cos(state.spaceship.angle) * 15; // Shoot from nose
+        const shootY = state.spaceship.y + Math.sin(state.spaceship.angle) * 15; // Shoot from nose
+        
+        state.projectiles.push({
+          x: shootX,
+          y: shootY,
+          vx: Math.cos(state.spaceship.angle) * speed,
+          vy: Math.sin(state.spaceship.angle) * speed,
+        });
+        state.lastShot = currentTime;
+      }
     }
   }, [createShootingStar, createTarget, createExplosion]);
 
@@ -337,61 +368,67 @@ export default function CanvasGame() {
       ctx.stroke();
     });
 
-    // Render spaceship
-    ctx.save();
-    ctx.translate(state.spaceship.x, state.spaceship.y);
-    ctx.rotate(state.spaceship.angle);
-    
-    // Draw spaceship body
-    ctx.fillStyle = '#3B82F6';
-    ctx.beginPath();
-    ctx.moveTo(15, 0);  // Nose of the ship
-    ctx.lineTo(-10, -8); // Top wing
-    ctx.lineTo(-6, 0);   // Body center
-    ctx.lineTo(-10, 8);  // Bottom wing
-    ctx.closePath();
-    ctx.fill();
-    
-    // Draw spaceship outline for better visibility
-    ctx.strokeStyle = '#60A5FA';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    
-    ctx.restore();
-
-    // Render projectiles
-    state.projectiles.forEach(projectile => {
-      ctx.fillStyle = '#60A5FA';
-      ctx.beginPath();
-      ctx.arc(projectile.x, projectile.y, 2, 0, Math.PI * 2);
-      ctx.fill();
-    });
-
-    // Render targets
-    state.targets.forEach((target) => {
-      const alpha = Math.min(target.animationProgress, 1);
-      const scale = Math.min(target.animationProgress * 1.2, 1); // Slight scale animation
-      
+    if (mode === 'game') {
+      // Render spaceship
       ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.translate(target.x, target.y);
-      ctx.scale(scale, scale);
+      ctx.translate(state.spaceship.x, state.spaceship.y);
+      ctx.rotate(state.spaceship.angle);
       
+      // Draw spaceship body
+      ctx.fillStyle = '#3B82F6';
+      ctx.beginPath();
+      ctx.moveTo(15, 0);  // Nose of the ship
+      ctx.lineTo(-10, -8); // Top wing
+      ctx.lineTo(-6, 0);   // Body center
+      ctx.lineTo(-10, 8);  // Bottom wing
+      ctx.closePath();
+      ctx.fill();
+      
+      // Draw spaceship outline for better visibility
       ctx.strokeStyle = '#60A5FA';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(0, 0, target.radius, 0, Math.PI * 2);
-      ctx.stroke();
-      
-      // Add a pulsing inner circle
-      ctx.strokeStyle = '#93C5FD';
       ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(0, 0, target.radius * 0.6, 0, Math.PI * 2);
       ctx.stroke();
       
       ctx.restore();
-    });
+    }
+
+    if (mode === 'game') {
+      // Render projectiles
+      state.projectiles.forEach(projectile => {
+        ctx.fillStyle = '#60A5FA';
+        ctx.beginPath();
+        ctx.arc(projectile.x, projectile.y, 2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    if (mode === 'game') {
+      // Render targets
+      state.targets.forEach((target) => {
+        const alpha = Math.min(target.animationProgress, 1);
+        const scale = Math.min(target.animationProgress * 1.2, 1); // Slight scale animation
+        
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.translate(target.x, target.y);
+        ctx.scale(scale, scale);
+        
+        ctx.strokeStyle = '#60A5FA';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, target.radius, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Add a pulsing inner circle
+        ctx.strokeStyle = '#93C5FD';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(0, 0, target.radius * 0.6, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        ctx.restore();
+      });
+    }
 
     // Render particles
     state.particles.forEach(particle => {
@@ -401,6 +438,26 @@ export default function CanvasGame() {
       ctx.arc(particle.x, particle.y, 1, 0, Math.PI * 2);
       ctx.fill();
     });
+
+    // Render kill counter (tiny, blue) at bottom center
+    if (mode === 'game') {
+      const countText = `${Math.min(state.killed, targetGoal)}/${targetGoal}`;
+      ctx.save();
+      ctx.font = '12px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      const x = canvas.width / 2;
+      const y = canvas.height - 10;
+      // shadow for readability
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillText(countText, x + 1, y);
+      ctx.fillText(countText, x - 1, y);
+      ctx.fillText(countText, x, y + 1);
+      // blue text
+      ctx.fillStyle = '#60A5FA';
+      ctx.fillText(countText, x, y);
+      ctx.restore();
+    }
   }, []);
 
   // Game loop
@@ -415,8 +472,19 @@ export default function CanvasGame() {
     update(canvas, currentTime);
     render(canvas, ctx);
 
+    // Redirect if goal reached (only in game mode)
+    if (
+      mode === 'game' &&
+      !redirectedRef.current &&
+      gameStateRef.current.killed >= targetGoal
+    ) {
+      redirectedRef.current = true;
+      router.push(redirectPath);
+      return; // stop scheduling next frame; component will unmount on route change
+    }
+
     animationFrameRef.current = requestAnimationFrame(gameLoop);
-  }, [update, render]);
+  }, [update, render, mode, targetGoal, router, redirectPath]);
 
   // Handle mouse/touch events
   const handlePointerMove = useCallback((e: any) => {
@@ -432,13 +500,17 @@ export default function CanvasGame() {
     
     gameStateRef.current.mouseX = mouseX;
     gameStateRef.current.mouseY = mouseY;
-    gameStateRef.current.spaceship.targetX = mouseX;
-    gameStateRef.current.spaceship.targetY = mouseY;
-  }, []);
+    if (mode === 'game') {
+      gameStateRef.current.spaceship.targetX = mouseX;
+      gameStateRef.current.spaceship.targetY = mouseY;
+    }
+  }, [mode]);
 
   const handlePointerDown = useCallback(() => {
-    gameStateRef.current.isShooting = true;
-  }, []);
+    if (mode === 'game') {
+      gameStateRef.current.isShooting = true;
+    }
+  }, [mode]);
 
   const handlePointerUp = useCallback(() => {
     gameStateRef.current.isShooting = false;
@@ -455,12 +527,14 @@ export default function CanvasGame() {
     // Re-initialize stars for new canvas size
     initializeStars(canvas);
     
-    // Reset spaceship position to lower right
-    gameStateRef.current.spaceship.x = canvas.width - 100;
-    gameStateRef.current.spaceship.y = canvas.height - 100;
-    gameStateRef.current.spaceship.targetX = canvas.width - 100;
-    gameStateRef.current.spaceship.targetY = canvas.height - 100;
-  }, [initializeStars]);
+    if (mode === 'game') {
+      // Reset spaceship position to lower right
+      gameStateRef.current.spaceship.x = canvas.width - 100;
+      gameStateRef.current.spaceship.y = canvas.height - 100;
+      gameStateRef.current.spaceship.targetX = canvas.width - 100;
+      gameStateRef.current.spaceship.targetY = canvas.height - 100;
+    }
+  }, [initializeStars, mode]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -472,22 +546,25 @@ export default function CanvasGame() {
 
     // Initialize game state
     initializeStars(canvas);
-    gameStateRef.current.spaceship.x = canvas.width - 100;
-    gameStateRef.current.spaceship.y = canvas.height - 100;
-    gameStateRef.current.spaceship.targetX = canvas.width - 100;
-    gameStateRef.current.spaceship.targetY = canvas.height - 100;
+    if (mode === 'game') {
+      gameStateRef.current.spaceship.x = canvas.width - 100;
+      gameStateRef.current.spaceship.y = canvas.height - 100;
+      gameStateRef.current.spaceship.targetX = canvas.width - 100;
+      gameStateRef.current.spaceship.targetY = canvas.height - 100;
+    }
 
     // Add event listeners
     canvas.addEventListener('pointermove', handlePointerMove);
-    canvas.addEventListener('pointerdown', handlePointerDown);
-    canvas.addEventListener('pointerup', handlePointerUp);
-    canvas.addEventListener('pointerleave', handlePointerUp);
-    
-    // Also add mouse event listeners for better compatibility
-    canvas.addEventListener('mousemove', handlePointerMove);
-    canvas.addEventListener('mousedown', handlePointerDown);
-    canvas.addEventListener('mouseup', handlePointerUp);
-    canvas.addEventListener('mouseleave', handlePointerUp);
+    if (mode === 'game') {
+      canvas.addEventListener('pointerdown', handlePointerDown);
+      canvas.addEventListener('pointerup', handlePointerUp);
+      canvas.addEventListener('pointerleave', handlePointerUp);
+      
+      // Also add mouse event listeners for better compatibility
+      canvas.addEventListener('mousedown', handlePointerDown);
+      canvas.addEventListener('mouseup', handlePointerUp);
+      canvas.addEventListener('mouseleave', handlePointerUp);
+    }
     
     window.addEventListener('resize', handleResize);
 
@@ -500,27 +577,30 @@ export default function CanvasGame() {
         cancelAnimationFrame(animationFrameRef.current);
       }
       canvas.removeEventListener('pointermove', handlePointerMove);
-      canvas.removeEventListener('pointerdown', handlePointerDown);
-      canvas.removeEventListener('pointerup', handlePointerUp);
-      canvas.removeEventListener('pointerleave', handlePointerUp);
-      
-      // Remove mouse event listeners
-      canvas.removeEventListener('mousemove', handlePointerMove);
-      canvas.removeEventListener('mousedown', handlePointerDown);
-      canvas.removeEventListener('mouseup', handlePointerUp);
-      canvas.removeEventListener('mouseleave', handlePointerUp);
+      if (mode === 'game') {
+        canvas.removeEventListener('pointerdown', handlePointerDown);
+        canvas.removeEventListener('pointerup', handlePointerUp);
+        canvas.removeEventListener('pointerleave', handlePointerUp);
+        
+        // Remove mouse event listeners
+        canvas.removeEventListener('mousemove', handlePointerMove);
+        canvas.removeEventListener('mousedown', handlePointerDown);
+        canvas.removeEventListener('mouseup', handlePointerUp);
+        canvas.removeEventListener('mouseleave', handlePointerUp);
+      }
       
       window.removeEventListener('resize', handleResize);
     };
-  }, [gameLoop, handlePointerMove, handlePointerDown, handlePointerUp, handleResize, initializeStars]);
+  }, [gameLoop, handlePointerMove, handlePointerDown, handlePointerUp, handleResize, initializeStars, mode]);
 
   return (
     <canvas
       ref={canvasRef}
       className="fixed inset-0 z-0"
       style={{ 
-        touchAction: 'none',
-        background: '#212121'
+  touchAction: 'none',
+  background: '#212121',
+  pointerEvents: mode === 'game' ? 'auto' : 'none',
       }}
     />
   );
