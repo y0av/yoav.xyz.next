@@ -19,7 +19,7 @@ export default function Bio() {
       onAnimationStart={() => setAnimStarted(true)}
       style={{ opacity: animStarted ? undefined : 0 }}
     >
-      <p className="text-base sm:text-lg lg:text-xl text-gray-200 leading-relaxed">
+  <p className="text-xs sm:text-sm md:text-base lg:text-lg text-gray-200 leading-relaxed">
         A Full-stack lead developer with expertise in IoT sensor based devices,<br />
         Cross platform mobile applications and gamification.<br />
         More than 18 years of professional experience in development.
