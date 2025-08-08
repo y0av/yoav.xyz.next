@@ -1,17 +1,16 @@
-# Firebase App Hosting configuration
-# Provide NEXT_PUBLIC_ variables for both build and run so Next.js client can access them.
-
 yamlVersion: 1
+
+# Environment variables
+env:
+  - variable: NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+    value: "6Le5LZ8rAAAAAChcZ5VJKUX6mOrszt5eJvRB2Cdx"
+    availability:
+      - BUILD
+      - RUNTIME
+    # Note: reCAPTCHA site key is public by design; do not include debug tokens in production.
 
 build:
   command: pnpm build
-  env:
-    - key: NEXT_PUBLIC_RECAPTCHA_SITE_KEY
-      value: "6Le5LZ8rAAAAAChcZ5VJKUX6mOrszt5eJvRB2Cdx"
-    # Do NOT set NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN in production
 
 run:
   command: pnpm start
-  env:
-    - key: NEXT_PUBLIC_RECAPTCHA_SITE_KEY
-      value: "6Le5LZ8rAAAAAChcZ5VJKUX6mOrszt5eJvRB2Cdx"
