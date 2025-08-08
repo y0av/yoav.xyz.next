@@ -140,7 +140,7 @@ export default function Portrait() {
     <div
       className="mb-8 perspective-1000 animate-spin-in animate-delay-400 pointer-events-auto"
       onAnimationStart={() => setAnimStarted(true)}
-      style={{ visibility: animStarted ? 'visible' : 'hidden', animationFillMode: 'backwards' as any }}
+  style={{ visibility: animStarted ? 'visible' : 'hidden' }}
     >
       <div
         ref={imageRef}
