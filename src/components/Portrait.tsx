@@ -49,7 +49,7 @@ export default function Portrait() {
           setRotation({ x: 0, y: 0 });
         }
         // do not clear here; we'll null the ref on start of next interaction or unmount
-      }, 3000);
+      }, 1000);
     }
   }, [isDragging, isResetting]);
 
