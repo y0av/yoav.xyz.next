@@ -439,21 +439,23 @@ export default function CanvasGame({
       ctx.fill();
     });
 
-    // Render kill counter (tiny, blue) in top-left
+    // Render kill counter (tiny, blue) at bottom center
     if (mode === 'game') {
       const countText = `${Math.min(state.killed, targetGoal)}/${targetGoal}`;
       ctx.save();
       ctx.font = '12px monospace';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      const x = canvas.width / 2;
+      const y = canvas.height - 10;
       // shadow for readability
       ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.fillText(countText, 9, 9);
-      ctx.fillText(countText, 10, 9);
-      ctx.fillText(countText, 9, 10);
+      ctx.fillText(countText, x + 1, y);
+      ctx.fillText(countText, x - 1, y);
+      ctx.fillText(countText, x, y + 1);
       // blue text
       ctx.fillStyle = '#60A5FA';
-      ctx.fillText(countText, 10, 10);
+      ctx.fillText(countText, x, y);
       ctx.restore();
     }
   }, []);

@@ -1,9 +1,16 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import {
+  addDoc,
+  collection,
+  serverTimestamp,
+  onSnapshot,
+  query,
+  orderBy,
+} from 'firebase/firestore';
 
 const CanvasGame = dynamic(() => import('@/components/CanvasGame'), { ssr: false });
 
@@ -13,6 +20,17 @@ export default function GuestbookPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [entries, setEntries] = useState<Array<{ id: string; name: string; message: string; createdAt?: any }>>([]);
+
+  useEffect(() => {
+    const q = query(collection(db, 'guestbook'), orderBy('createdAt', 'desc'));
+    const unsub = onSnapshot(q, (snap) => {
+      const list: Array<{ id: string; name: string; message: string; createdAt?: any }> = [];
+      snap.forEach((doc) => list.push({ id: doc.id, ...(doc.data() as any) }));
+      setEntries(list);
+    });
+    return () => unsub();
+  }, []);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +64,7 @@ export default function GuestbookPage() {
       <CanvasGame mode="starsOnly" />
 
       <main className="relative z-10 flex items-center justify-center min-h-screen p-4">
-        <div className="w-full max-w-xl rounded-md bg-black/40 backdrop-blur border border-white/10 p-6 text-white">
+        <div className="w-full max-w-3xl rounded-md bg-black/40 backdrop-blur border border-white/10 p-6 text-white">
           <form onSubmit={onSubmit} className="space-y-4">
             <input
               type="text"
@@ -74,6 +92,28 @@ export default function GuestbookPage() {
               {error && <span className="text-red-400 text-sm">{error}</span>}
             </div>
           </form>
+          <div className="mt-6 h-px bg-white/10" />
+          <div className="mt-6">
+            <h2 className="mb-3 text-sm uppercase tracking-wider text-white/70">Guestbook</h2>
+            <div className="max-h-[50vh] overflow-y-auto pr-2 custom-scroll">
+              {entries.length === 0 && (
+                <div className="text-white/60 text-sm">No messages yet. Be the first!</div>
+              )}
+              <ul className="space-y-3">
+                {entries.map((e) => (
+                  <li key={e.id} className="rounded border border-white/10 bg-white/5 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-blue-300 text-sm font-medium">{e.name || 'Anonymous'}</span>
+                      <span className="text-white/50 text-xs">
+                        {e.createdAt?.toDate ? new Date(e.createdAt.toDate()).toLocaleString() : ''}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-white/90 whitespace-pre-wrap break-words">{e.message}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         </div>
       </main>
     </div>
