@@ -11,66 +11,72 @@ export default function Portrait() {
   const [lastPointer, setLastPointer] = useState({ x: 0, y: 0 });
   const animationFrameRef = useRef<number | null>(null);
   const returnToZeroTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
+  // Refs to avoid stale state in RAF loop
+  const rotationRef = useRef({ x: 0, y: 0 });
+  const velocityRef = useRef({ x: 0, y: 0 });
 
   const applyFriction = useCallback(() => {
-    setVelocity(prev => ({
-      x: prev.x * 0.98,
-      y: prev.y * 0.98,
-    }));
+    // Use refs for smooth, natural physics without stale closures
+    const currentVel = velocityRef.current;
+    const nextVel = {
+      x: currentVel.x * 0.98,
+      y: currentVel.y * 0.98,
+    };
+    velocityRef.current = nextVel;
+    setVelocity(nextVel);
 
-    setRotation(prev => {
-      const newRotation = {
-        x: prev.x + velocity.x,
-        y: prev.y + velocity.y,
-      };
-      
-      // When velocity is very low, smoothly return to original position after delay
-      if (Math.abs(velocity.x) < 0.3 && Math.abs(velocity.y) < 0.3) {
-        if (!returnToZeroTimeoutRef.current) {
-          returnToZeroTimeoutRef.current = setTimeout(() => {
-            // Start return to center animation
-            const returnToCenter = () => {
-              setRotation(prev => {
-                if (Math.abs(prev.x) > 0.1 || Math.abs(prev.y) > 0.1) {
-                  const finalRotation = {
-                    x: prev.x * 0.92,
-                    y: prev.y * 0.92,
-                  };
-                  animationFrameRef.current = requestAnimationFrame(returnToCenter);
-                  return finalRotation;
-                }
-                return prev;
-              });
-            };
-            returnToCenter();
-          }, 4000);
-        }
-        newRotation.x = newRotation.x * 0.92;
-        newRotation.y = newRotation.y * 0.92;
-      }
-      
-      return newRotation;
-    });
+    const currentRot = rotationRef.current;
+    const nextRot = {
+      x: currentRot.x + nextVel.x,
+      y: currentRot.y + nextVel.y,
+    };
+    rotationRef.current = nextRot;
+    setRotation(nextRot);
 
-    if (Math.abs(velocity.x) > 0.05 || Math.abs(velocity.y) > 0.05) {
+    const speedLow = Math.abs(nextVel.x) <= 0.05 && Math.abs(nextVel.y) <= 0.05;
+
+    if (!speedLow && !isResetting) {
       animationFrameRef.current = requestAnimationFrame(applyFriction);
     }
-  }, [velocity.x, velocity.y]);
+
+    // When motion has effectively stopped, schedule the delayed reset
+    if (speedLow && !isDragging && !isResetting && !returnToZeroTimeoutRef.current) {
+      returnToZeroTimeoutRef.current = setTimeout(() => {
+        if (!isDragging) {
+          setIsResetting(true);
+          rotationRef.current = { x: 0, y: 0 };
+          setRotation({ x: 0, y: 0 });
+        }
+        // do not clear here; we'll null the ref on start of next interaction or unmount
+      }, 3000);
+    }
+  }, [isDragging, isResetting]);
 
   useEffect(() => {
-    if (!isDragging && (Math.abs(velocity.x) > 0.05 || Math.abs(velocity.y) > 0.05)) {
+    if (!isDragging && !isResetting && (Math.abs(velocity.x) > 0.05 || Math.abs(velocity.y) > 0.05)) {
       animationFrameRef.current = requestAnimationFrame(applyFriction);
     }
-    
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
+    };
+  }, [isDragging, isResetting, velocity, applyFriction]);
+
+  // Keep refs in sync whenever public state changes (external updates or direct sets)
+  useEffect(() => { rotationRef.current = rotation; }, [rotation]);
+  useEffect(() => { velocityRef.current = velocity; }, [velocity]);
+
+  // Clear any pending reset on unmount only
+  useEffect(() => {
+    return () => {
       if (returnToZeroTimeoutRef.current) {
         clearTimeout(returnToZeroTimeoutRef.current);
+        returnToZeroTimeoutRef.current = null;
       }
     };
-  }, [isDragging, velocity, applyFriction]);
+  }, []);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     setIsDragging(true);
@@ -81,6 +87,8 @@ export default function Portrait() {
       clearTimeout(returnToZeroTimeoutRef.current);
       returnToZeroTimeoutRef.current = null;
     }
+  // Cancel any ongoing smooth reset and remove transition immediately
+  setIsResetting(false);
     
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
@@ -100,15 +108,13 @@ export default function Portrait() {
     const deltaX = e.clientX - lastPointer.x;
     const deltaY = e.clientY - lastPointer.y;
 
-    setVelocity({
-      x: deltaY * 0.8,
-      y: deltaX * 0.8,
-    });
+  const newVel = { x: deltaY * 0.8, y: deltaX * 0.8 };
+  velocityRef.current = newVel;
+  setVelocity(newVel);
 
-    setRotation(prev => ({
-      x: prev.x + deltaY * 0.8,
-      y: prev.y + deltaX * 0.8,
-    }));
+  const nextRot = { x: rotationRef.current.x + newVel.x, y: rotationRef.current.y + newVel.y };
+  rotationRef.current = nextRot;
+  setRotation(nextRot);
 
     setLastPointer({ x: e.clientX, y: e.clientY });
   }, [isDragging, lastPointer]);
@@ -124,7 +130,7 @@ export default function Portrait() {
     }
     
     // Start friction animation if there's velocity
-    if (Math.abs(velocity.x) > 0.05 || Math.abs(velocity.y) > 0.05) {
+  if (Math.abs(velocityRef.current.x) > 0.05 || Math.abs(velocityRef.current.y) > 0.05) {
       animationFrameRef.current = requestAnimationFrame(applyFriction);
     }
   }, [velocity, applyFriction]);
@@ -137,11 +143,17 @@ export default function Portrait() {
         style={{
           transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,
           transformStyle: 'preserve-3d',
+          transition: isResetting ? 'transform 1200ms cubic-bezier(0.22, 1, 0.36, 1)' : undefined,
         }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
+        onTransitionEnd={() => {
+          // End of smooth reset
+          setIsResetting(false);
+          setRotation({ x: 0, y: 0 });
+        }}
       >
         <div className="relative w-full h-full rounded-full border-4 border-white overflow-hidden shadow-lg">
           <Image
