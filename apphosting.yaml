@@ -1,0 +1,17 @@
+# Firebase App Hosting configuration
+# Provide NEXT_PUBLIC_ variables for both build and run so Next.js client can access them.
+
+yamlVersion: 1
+
+build:
+  command: pnpm build
+  env:
+    - key: NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+      value: "6Le5LZ8rAAAAAChcZ5VJKUX6mOrszt5eJvRB2Cdx"
+    # Do NOT set NEXT_PUBLIC_APPCHECK_DEBUG_TOKEN in production
+
+run:
+  command: pnpm start
+  env:
+    - key: NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+      value: "6Le5LZ8rAAAAAChcZ5VJKUX6mOrszt5eJvRB2Cdx"
