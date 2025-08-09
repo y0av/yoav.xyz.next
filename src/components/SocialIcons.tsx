@@ -1,4 +1,6 @@
-'use client';
+"use client";
+
+import { logFirebaseEvent } from '@/lib/firebase';
 
 const StackOverflowIcon = () => (
   <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
@@ -47,6 +49,7 @@ export default function SocialIcons() {
           rel={link.href.startsWith('mailto:') ? undefined : 'noopener noreferrer'}
           className={`text-gray-300 hover:text-blue-400 transition-all duration-300 hover:scale-110 animate-bounce-in animate-delay-${800 + index * 100}`}
           aria-label={link.label}
+          onClick={() => logFirebaseEvent('social_click', { network: link.label, href: link.href })}
         >
           <link.icon />
         </a>

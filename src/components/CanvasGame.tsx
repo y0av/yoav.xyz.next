@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useCallback } from 'react';
+import { logFirebaseEvent } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 
 interface Star {
@@ -174,7 +175,7 @@ export default function CanvasGame({
         sourceY = targetY;
     }
     
-    gameStateRef.current.targets.push({
+  gameStateRef.current.targets.push({
       x: sourceX, // Start at source position
       y: sourceY, // Start at source position
       radius: 20,
@@ -184,6 +185,7 @@ export default function CanvasGame({
       targetX, // Store final position
       targetY, // Store final position
     });
+  logFirebaseEvent('game_target_spawn');
   }, []);
 
   // Create explosion particles
@@ -304,6 +306,7 @@ export default function CanvasGame({
             state.projectiles.splice(pIndex, 1);
             state.targets.splice(tIndex, 1);
             state.killed += 1;
+            logFirebaseEvent('game_target_hit', { total: state.killed });
             break;
           }
         }
@@ -479,7 +482,8 @@ export default function CanvasGame({
       gameStateRef.current.killed >= targetGoal
     ) {
       redirectedRef.current = true;
-      router.push(redirectPath);
+  logFirebaseEvent('game_goal_reached', { killed: gameStateRef.current.killed, goal: targetGoal });
+  router.push(redirectPath);
       return; // stop scheduling next frame; component will unmount on route change
     }
 
@@ -509,11 +513,13 @@ export default function CanvasGame({
   const handlePointerDown = useCallback(() => {
     if (mode === 'game') {
       gameStateRef.current.isShooting = true;
+      logFirebaseEvent('game_shooting_start');
     }
   }, [mode]);
 
   const handlePointerUp = useCallback(() => {
-    gameStateRef.current.isShooting = false;
+  gameStateRef.current.isShooting = false;
+  if (mode === 'game') logFirebaseEvent('game_shooting_end');
   }, []);
 
   // Resize handler

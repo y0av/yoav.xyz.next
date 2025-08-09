@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase';
+import { logFirebaseEvent } from '@/lib/firebase';
 import {
   addDoc,
   collection,
@@ -37,6 +38,7 @@ export default function GuestbookPage() {
     setSubmitting(true);
     setError(null);
     setSuccess(false);
+    logFirebaseEvent('guestbook_submit_attempt');
     try {
       const trimmedName = name.trim().slice(0, 60) || 'Anonymous';
       const trimmedMsg = message.trim().slice(0, 1000);
@@ -51,8 +53,10 @@ export default function GuestbookPage() {
       setSuccess(true);
       setName('');
       setMessage('');
+      logFirebaseEvent('guestbook_submit_success', { name_provided: !!name.trim(), length: trimmedMsg.length });
     } catch (err: any) {
       setError(err?.message || 'Failed to post message');
+      logFirebaseEvent('guestbook_submit_error', { message: err?.message || 'unknown' });
     } finally {
       setSubmitting(false);
     }

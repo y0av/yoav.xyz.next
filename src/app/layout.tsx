@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Roboto_Mono } from "next/font/google";
 import "./globals.css";
+import AnalyticsProvider from "@/components/AnalyticsProvider";
+import { Suspense } from "react";
 
 const robotoMono = Roboto_Mono({
   variable: "--font-roboto-mono",
@@ -23,7 +25,10 @@ export default function RootLayout({
       <body
         className={`${robotoMono.variable} antialiased font-mono`}
       >
-        {children}
+  <Suspense fallback={null}>
+    <AnalyticsProvider />
+  </Suspense>
+  {children}
       </body>
     </html>
   );
