@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useRef, useState, useCallback, useEffect } from 'react';
+import { logFirebaseEvent } from '@/lib/firebase';
 
 export default function Portrait() {
   const imageRef = useRef<HTMLDivElement>(null);
@@ -96,11 +97,12 @@ export default function Portrait() {
     }
     
     // Safely set pointer capture
-    try {
+  try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch (error) {
       // Ignore invalid pointer id errors
     }
+  logFirebaseEvent('portrait_drag_start');
   }, []);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
@@ -124,7 +126,7 @@ export default function Portrait() {
     setIsDragging(false);
     
     // Safely release pointer capture
-    try {
+  try {
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch (error) {
       // Ignore invalid pointer id errors
@@ -134,6 +136,7 @@ export default function Portrait() {
   if (Math.abs(velocityRef.current.x) > 0.05 || Math.abs(velocityRef.current.y) > 0.05) {
       animationFrameRef.current = requestAnimationFrame(applyFriction);
     }
+    logFirebaseEvent('portrait_drag_end', { velocityX: velocityRef.current.x, velocityY: velocityRef.current.y });
   }, [velocity, applyFriction]);
 
   return (
@@ -158,6 +161,7 @@ export default function Portrait() {
           // End of smooth reset
           setIsResetting(false);
           setRotation({ x: 0, y: 0 });
+          logFirebaseEvent('portrait_reset');
         }}
       >
         <div className="relative w-full h-full rounded-full border-4 border-white overflow-hidden shadow-lg">
