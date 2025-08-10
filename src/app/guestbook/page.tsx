@@ -18,15 +18,16 @@ const CanvasGame = dynamic(() => import('@/components/CanvasGame'), { ssr: false
 export default function GuestbookPage() {
   const [name, setName] = useState('');
   const [message, setMessage] = useState('');
+  const [website, setWebsite] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [entries, setEntries] = useState<Array<{ id: string; name: string; message: string; createdAt?: any }>>([]);
+  const [entries, setEntries] = useState<Array<{ id: string; name: string; message: string; website?: string; createdAt?: any }>>([]);
 
   useEffect(() => {
     const q = query(collection(db, 'guestbook'), orderBy('createdAt', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
-      const list: Array<{ id: string; name: string; message: string; createdAt?: any }> = [];
+      const list: Array<{ id: string; name: string; message: string; website?: string; createdAt?: any }> = [];
       snap.forEach((doc) => list.push({ id: doc.id, ...(doc.data() as any) }));
       setEntries(list);
     });
@@ -42,18 +43,34 @@ export default function GuestbookPage() {
     try {
       const trimmedName = name.trim().slice(0, 60) || 'Anonymous';
       const trimmedMsg = message.trim().slice(0, 1000);
+      let trimmedWebsite = website.trim();
+      if (trimmedWebsite.length > 0) {
+        // Basic normalization: prepend https:// if no scheme provided
+        if (!/^https?:\/\//i.test(trimmedWebsite)) {
+          trimmedWebsite = 'https://' + trimmedWebsite;
+        }
+        // Enforce max length
+        trimmedWebsite = trimmedWebsite.slice(0, 200);
+        // Very lightweight validation (reject spaces and require a dot)
+        const invalid = /\s/.test(trimmedWebsite) || !/\./.test(trimmedWebsite);
+        if (invalid) {
+          throw new Error('Invalid website URL');
+        }
+      }
       if (!trimmedMsg) {
         throw new Error('Message cannot be empty');
       }
       await addDoc(collection(db, 'guestbook'), {
         name: trimmedName,
         message: trimmedMsg,
+        ...(trimmedWebsite ? { website: trimmedWebsite } : {}),
         createdAt: serverTimestamp(),
       });
       setSuccess(true);
       setName('');
       setMessage('');
-      logFirebaseEvent('guestbook_submit_success', { name_provided: !!name.trim(), length: trimmedMsg.length });
+      setWebsite('');
+      logFirebaseEvent('guestbook_submit_success', { name_provided: !!name.trim(), length: trimmedMsg.length, website: !!trimmedWebsite });
     } catch (err: any) {
       setError(err?.message || 'Failed to post message');
       logFirebaseEvent('guestbook_submit_error', { message: err?.message || 'unknown' });
@@ -75,6 +92,13 @@ export default function GuestbookPage() {
               placeholder="your name"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              className="w-full rounded px-3 py-2 bg-black/30 border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+            <input
+              type="text"
+              placeholder="website (optional)"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
               className="w-full rounded px-3 py-2 bg-black/30 border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
             <textarea
@@ -107,7 +131,20 @@ export default function GuestbookPage() {
                 {entries.map((e) => (
                   <li key={e.id} className="rounded border border-white/10 bg-white/5 p-3">
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-blue-300 text-sm font-medium">{e.name || 'Anonymous'}</span>
+                      <span className="text-blue-300 text-sm font-medium flex items-center gap-2">
+                        {e.name || 'Anonymous'}
+                        {e.website && (
+                          <a
+                            href={e.website}
+                            target="_blank"
+                            rel="noopener noreferrer nofollow"
+                            className="text-xs text-blue-400 underline decoration-dotted hover:text-blue-300"
+                            onClick={() => logFirebaseEvent('guestbook_website_click')}
+                          >
+                            site
+                          </a>
+                        )}
+                      </span>
                       <span className="text-white/50 text-xs">
                         {e.createdAt?.toDate ? new Date(e.createdAt.toDate()).toLocaleString() : ''}
                       </span>
