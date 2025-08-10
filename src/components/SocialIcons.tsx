@@ -23,7 +23,7 @@ const EmailIcon = () => (
 export default function SocialIcons() {
   const socialLinks = [
     {
-      href: 'https://stackoverflow.com/users/874662/joe', // Update with your StackOverflow profile
+      href: 'https://stackoverflow.com/users/874662/joe',
       icon: StackOverflowIcon,
       label: 'StackOverflow',
     },
@@ -33,7 +33,7 @@ export default function SocialIcons() {
       label: 'GitHub',
     },
     {
-      href: 'mailto:gy4b6ss7w@mozmail.com', // Update with your email
+      href: 'mailto:gy4b6ss7w@mozmail.com',
       icon: EmailIcon,
       label: 'Email',
     },
