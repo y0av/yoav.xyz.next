@@ -80,7 +80,7 @@ export default function GuestbookPage() {
   };
 
   return (
-  <div className="relative min-h-screen bg-gray-800">
+  <div className="relative min-h-screen overflow-y-auto bg-gray-800">
       {/* Stars-only background */}
       <CanvasGame mode="starsOnly" />
 
