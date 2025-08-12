@@ -9,7 +9,9 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-roboto-mono), monospace;
-  overflow: hidden;
+  /* Allow vertical scrolling globally; individual pages can still opt-in to hidden overflow */
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 html, body {
