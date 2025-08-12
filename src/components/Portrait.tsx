@@ -13,7 +13,6 @@ export default function Portrait() {
   const animationFrameRef = useRef<number | null>(null);
   const returnToZeroTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isResetting, setIsResetting] = useState(false);
-  const [animStarted, setAnimStarted] = useState(false);
   // Refs to avoid stale state in RAF loop
   const rotationRef = useRef({ x: 0, y: 0 });
   const velocityRef = useRef({ x: 0, y: 0 });
@@ -142,8 +141,6 @@ export default function Portrait() {
   return (
     <div
       className="mb-8 perspective-1000 animate-spin-in animate-delay-400 pointer-events-auto"
-      onAnimationStart={() => setAnimStarted(true)}
-  style={{ visibility: animStarted ? 'visible' : 'hidden' }}
     >
       <div
         ref={imageRef}

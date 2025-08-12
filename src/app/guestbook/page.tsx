@@ -80,12 +80,12 @@ export default function GuestbookPage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gray-800">
+  <div className="relative min-h-screen overflow-y-auto bg-gray-800">
       {/* Stars-only background */}
       <CanvasGame mode="starsOnly" />
 
-      <main className="relative z-10 flex items-center justify-center min-h-screen p-4">
-        <div className="w-full max-w-3xl rounded-md bg-black/40 backdrop-blur border border-white/10 p-6 text-white">
+  <main className="relative z-10 flex items-center justify-center min-h-screen p-4">
+  <div className="w-full max-w-3xl rounded-md bg-black/40 backdrop-blur border border-white/10 p-6 text-white">
           <form onSubmit={onSubmit} className="space-y-4">
             <input
               type="text"

@@ -14,7 +14,7 @@ const CanvasGame = dynamic(() => import('@/components/CanvasGame'), {
 
 export default function Home() {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gray-800">
+  <div className="relative min-h-screen overflow-hidden bg-gray-800">
   {/* Interactive Background Canvas */}
   <CanvasGame targetGoal={100} redirectPath="/guestbook" />
       
@@ -22,7 +22,7 @@ export default function Home() {
       <Logo />
       
       {/* Main content centered */}
-      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4 pointer-events-none">
+  <main className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4 pb-24 pointer-events-none">
         <div className="flex flex-col items-center justify-center space-y-6">
           {/* Greeting text */}
           <Greeting />
