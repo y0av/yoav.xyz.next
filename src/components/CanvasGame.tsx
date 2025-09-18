@@ -36,6 +36,11 @@ interface Target {
   sourceY: number; // Where it came from
   targetX: number; // Final destination X
   targetY: number; // Final destination Y
+  // Boss-related (optional for normal targets)
+  isBoss?: boolean;
+  hp?: number;
+  maxHp?: number;
+  hitFlash?: number; // small countdown frames for hit blink
 }
 
 interface Particle {
@@ -86,6 +91,7 @@ export default function CanvasGame({
     lastShootingStar: 0,
     lastTarget: 0,
     killed: 0,
+    totalTargetsSpawned: 0,
   });
 
   // Vector math utilities
@@ -175,17 +181,29 @@ export default function CanvasGame({
         sourceY = targetY;
     }
     
-  gameStateRef.current.targets.push({
-      x: sourceX, // Start at source position
-      y: sourceY, // Start at source position
-      radius: 20,
+    // Determine if this spawn should be a boss: spawn #50 and #80
+    const nextSpawnIndex = gameStateRef.current.totalTargetsSpawned + 1;
+    const isBoss = nextSpawnIndex === 50 || nextSpawnIndex === 80;
+
+    const target: Target = {
+      x: sourceX,
+      y: sourceY,
+      radius: isBoss ? 30 : 20,
       animationProgress: 0,
       sourceX,
       sourceY,
-      targetX, // Store final position
-      targetY, // Store final position
-    });
-  logFirebaseEvent('game_target_spawn');
+      targetX,
+      targetY,
+      isBoss,
+      hp: isBoss ? 30 : undefined,
+      maxHp: isBoss ? 30 : undefined,
+      hitFlash: 0,
+    };
+
+    gameStateRef.current.targets.push(target);
+    gameStateRef.current.totalTargetsSpawned = nextSpawnIndex;
+
+    logFirebaseEvent(isBoss ? 'game_boss_spawn' : 'game_target_spawn', { index: nextSpawnIndex });
   }, []);
 
   // Create explosion particles
@@ -281,14 +299,16 @@ export default function CanvasGame({
     });
 
     if (mode === 'game') {
-      // Update targets (animate entrance slowly)
+      // Update targets (animate entrance slowly, reduce hit flash)
       state.targets.forEach((target, index) => {
         if (target.animationProgress < 1) {
           target.animationProgress += 0.01; // Slower animation speed
-          
           // Lerp from source to target position
           target.x = lerp(target.sourceX, target.targetX, target.animationProgress);
           target.y = lerp(target.sourceY, target.targetY, target.animationProgress);
+        }
+        if (target.hitFlash && target.hitFlash > 0) {
+          target.hitFlash -= 1;
         }
       });
     }
@@ -298,17 +318,53 @@ export default function CanvasGame({
       // Note: iterate backwards to avoid index issues when splicing
       for (let pIndex = state.projectiles.length - 1; pIndex >= 0; pIndex--) {
         const projectile = state.projectiles[pIndex];
+        let projectileConsumed = false;
         for (let tIndex = state.targets.length - 1; tIndex >= 0; tIndex--) {
           const target = state.targets[tIndex];
           const distToTarget = distance(projectile.x, projectile.y, target.x, target.y);
           if (distToTarget < target.radius) {
-            createExplosion(target.x, target.y);
-            state.projectiles.splice(pIndex, 1);
-            state.targets.splice(tIndex, 1);
-            state.killed += 1;
-            logFirebaseEvent('game_target_hit', { total: state.killed });
+            // Hit detected
+            if (target.isBoss && typeof target.hp === 'number' && typeof target.maxHp === 'number') {
+              // Boss takes damage, blink on hit
+              target.hp = Math.max(0, target.hp - 1);
+              target.hitFlash = 6; // short blink
+              createExplosion(target.x, target.y);
+              state.projectiles.splice(pIndex, 1);
+              projectileConsumed = true;
+              logFirebaseEvent('game_boss_hit', { hp: target.hp, maxHp: target.maxHp });
+
+              if (target.hp <= 0) {
+                // Boss destroyed
+                state.targets.splice(tIndex, 1);
+                state.killed += 1;
+                logFirebaseEvent('game_boss_destroyed', { total: state.killed });
+                // Spawn 10 new circles immediately
+                for (let i = 0; i < 10; i++) {
+                  createTarget(canvas);
+                }
+                state.lastTarget = currentTime; // reset spawn timer
+              }
+            } else {
+              // Normal target destroyed
+              createExplosion(target.x, target.y);
+              state.projectiles.splice(pIndex, 1);
+              state.targets.splice(tIndex, 1);
+              state.killed += 1;
+              logFirebaseEvent('game_target_hit', { total: state.killed });
+              // If we just destroyed the last circle, immediately spawn 4 new circles
+              if (state.targets.length === 0) {
+                for (let i = 0; i < 4; i++) {
+                  createTarget(canvas);
+                }
+                state.lastTarget = currentTime; // reset spawn timer
+              }
+            }
             break;
           }
+        }
+        if (projectileConsumed) {
+          // continue to next projectile after handling hit
+          continue;
         }
       }
     }
@@ -410,25 +466,54 @@ export default function CanvasGame({
       state.targets.forEach((target) => {
         const alpha = Math.min(target.animationProgress, 1);
         const scale = Math.min(target.animationProgress * 1.2, 1); // Slight scale animation
-        
+
         ctx.save();
-        ctx.globalAlpha = alpha;
+        // Hit blink effect for bosses: alternate visibility
+        const blinkVisible = !target.hitFlash || target.hitFlash % 2 === 0;
+        ctx.globalAlpha = alpha * (blinkVisible ? 1 : 0.4);
         ctx.translate(target.x, target.y);
         ctx.scale(scale, scale);
-        
-        ctx.strokeStyle = '#60A5FA';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(0, 0, target.radius, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // Add a pulsing inner circle
-        ctx.strokeStyle = '#93C5FD';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.arc(0, 0, target.radius * 0.6, 0, Math.PI * 2);
-        ctx.stroke();
-        
+
+        if (target.isBoss) {
+          // Boss styling - purple
+          ctx.strokeStyle = '#A855F7'; // purple-500
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(0, 0, target.radius, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Inner circle
+          ctx.strokeStyle = '#C084FC'; // purple-400
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(0, 0, target.radius * 0.6, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // HP ring indicator
+          if (typeof target.hp === 'number' && typeof target.maxHp === 'number') {
+            const pct = Math.max(0, Math.min(1, target.hp / target.maxHp));
+            ctx.strokeStyle = '#F0ABFC'; // purple-300
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(0, 0, target.radius + 5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pct);
+            ctx.stroke();
+          }
+        } else {
+          // Normal target styling - blue
+          ctx.strokeStyle = '#60A5FA';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(0, 0, target.radius, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Add a pulsing inner circle
+          ctx.strokeStyle = '#93C5FD';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(0, 0, target.radius * 0.6, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
         ctx.restore();
       });
     }
