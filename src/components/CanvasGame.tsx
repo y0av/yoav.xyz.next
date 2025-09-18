@@ -307,6 +307,13 @@ export default function CanvasGame({
             state.targets.splice(tIndex, 1);
             state.killed += 1;
             logFirebaseEvent('game_target_hit', { total: state.killed });
+            // If we just destroyed the last circle, immediately spawn 4 new circles
+            if (state.targets.length === 0) {
+              for (let i = 0; i < 4; i++) {
+                createTarget(canvas);
+              }
+              state.lastTarget = currentTime; // reset spawn timer
+            }
             break;
           }
         }
