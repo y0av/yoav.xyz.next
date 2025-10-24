@@ -86,6 +86,40 @@ export default function GuestbookPage() {
 
   <main className="relative z-10 flex items-center justify-center min-h-screen p-4">
   <div className="w-full max-w-3xl rounded-md bg-black/40 backdrop-blur border border-white/10 p-6 text-white">
+          <div className="mb-6 flex flex-col gap-4 rounded-xl border border-white/15 bg-white/10 p-4 text-white shadow-md sm:flex-row sm:items-center">
+            <div>
+              <p className="text-lg font-semibold">Thanks for playing! &hearts;</p>
+              <p className="mt-1 text-sm text-white/70">
+                It would make my day if you{' '}
+                <a
+                  className="text-blue-300 underline transition hover:text-blue-200"
+                  href="https://github.com/y0av/yoav.xyz.next"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  star the repo
+                </a>{' '}
+                and{' '}
+                <a
+                  className="text-blue-300 underline transition hover:text-blue-200"
+                  href="https://github.com/y0av"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  follow me on GitHub
+                </a>
+                . I'll happily follow back!
+              </p>
+            </div>
+            <span className="inline-flex h-16 w-16 items-center justify-center self-start rounded-full bg-pink-500/20 text-pink-300 sm:ml-auto">
+              <svg viewBox="0 0 24 24" className="h-9 w-9 animate-[spin_5s_linear_infinite]">
+                <path
+                  fill="currentColor"
+                  d="M12 21c-4.35-3.44-7.5-6.62-7.5-10.25A4.75 4.75 0 0 1 9.25 6c1.44 0 2.72.67 3.5 1.72C13.03 6.67 14.31 6 15.75 6A4.75 4.75 0 0 1 20.5 10.75C20.5 14.38 17.35 17.56 12 21Z"
+                />
+              </svg>
+            </span>
+          </div>
           <form onSubmit={onSubmit} className="space-y-4">
             <input
               type="text"
