@@ -50,6 +50,9 @@ interface Particle {
   vy: number;
   life: number;
   maxLife: number;
+  size: number;
+  color: string;
+  type: 'spark' | 'ember' | 'ring' | 'classic';
 }
 
 interface Spaceship {
@@ -208,9 +211,34 @@ export default function CanvasGame({
 
   // Create explosion particles
   const createExplosion = useCallback((x: number, y: number) => {
-    for (let i = 0; i < 10; i++) {
-      const angle = (Math.PI * 2 * i) / 10;
-      const speed = Math.random() * 3 + 1;
+    const useNewStyle = Math.random() < 0.5;
+
+    if (!useNewStyle) {
+      // Legacy pop effect for familiarity
+      for (let i = 0; i < 10; i++) {
+        const angle = (Math.PI * 2 * i) / 10;
+        const speed = Math.random() * 3 + 1;
+        gameStateRef.current.particles.push({
+          x,
+          y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 30,
+          maxLife: 30,
+          size: 1,
+          color: '#60A5FA',
+          type: 'classic',
+        });
+      }
+      return;
+    }
+
+    const palette = ['#1D4ED8', '#2563EB', '#3B82F6', '#60A5FA', '#93C5FD', '#BFDBFE'];
+
+    // Fast sparks that spray outward
+    for (let i = 0; i < 20; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 4 + 2;
       gameStateRef.current.particles.push({
         x,
         y,
@@ -218,8 +246,41 @@ export default function CanvasGame({
         vy: Math.sin(angle) * speed,
         life: 30,
         maxLife: 30,
+        size: Math.random() * 2 + 1.5,
+        color: palette[Math.floor(Math.random() * palette.length)],
+        type: 'spark',
       });
     }
+
+    // Slow embers that float away
+    for (let i = 0; i < 12; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 2 + 0.5;
+      gameStateRef.current.particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 45,
+        maxLife: 45,
+        size: Math.random() * 3 + 2,
+        color: '#E0F2FE',
+        type: 'ember',
+      });
+    }
+
+    // Shockwave ring for extra punch
+    gameStateRef.current.particles.push({
+      x,
+      y,
+      vx: 0,
+      vy: 0,
+      life: 25,
+      maxLife: 25,
+      size: 8,
+      color: 'rgba(96,165,250,0.8)',
+      type: 'ring',
+    });
   }, []);
 
   // Update game state
@@ -287,16 +348,43 @@ export default function CanvasGame({
       });
     }
 
-    // Update particles
-    state.particles.forEach((particle, index) => {
-      particle.x += particle.vx;
-      particle.y += particle.vy;
+    // Update particles with type-specific behavior
+    for (let index = state.particles.length - 1; index >= 0; index--) {
+      const particle = state.particles[index];
       particle.life--;
-      
+
+      switch (particle.type) {
+        case 'classic': {
+          particle.x += particle.vx;
+          particle.y += particle.vy;
+          break;
+        }
+        case 'spark': {
+          particle.x += particle.vx;
+          particle.y += particle.vy;
+          particle.vx *= 0.96;
+          particle.vy = particle.vy * 0.96 + 0.02; // slight gravity pull
+          particle.size = Math.max(0.5, particle.size * 0.97);
+          break;
+        }
+        case 'ember': {
+          particle.x += particle.vx * 0.9;
+          particle.y += particle.vy * 0.9;
+          particle.vx *= 0.94;
+          particle.vy = particle.vy * 0.94 + 0.01;
+          particle.size = Math.max(1, particle.size * 0.995);
+          break;
+        }
+        case 'ring': {
+          particle.size += 1.4;
+          break;
+        }
+      }
+
       if (particle.life <= 0) {
         state.particles.splice(index, 1);
       }
-    });
+    }
 
     if (mode === 'game') {
       // Update targets (animate entrance slowly, reduce hit flash)
@@ -518,14 +606,28 @@ export default function CanvasGame({
       });
     }
 
-    // Render particles
+    // Render particles with additive glow for extra punch
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
     state.particles.forEach(particle => {
-      const alpha = particle.life / particle.maxLife;
-      ctx.fillStyle = `rgba(96, 165, 250, ${alpha})`;
+      const alpha = Math.max(0, particle.life / particle.maxLife);
+      ctx.globalAlpha = alpha;
+
+      if (particle.type === 'ring') {
+        ctx.strokeStyle = particle.color;
+        ctx.lineWidth = 1.5 + (1 - alpha) * 2;
+        ctx.beginPath();
+        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+        ctx.stroke();
+        return;
+      }
+
+      ctx.fillStyle = particle.color;
       ctx.beginPath();
-      ctx.arc(particle.x, particle.y, 1, 0, Math.PI * 2);
+      ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
       ctx.fill();
     });
+    ctx.restore();
 
     // Render kill counter (tiny, blue) at bottom center
     if (mode === 'game') {
