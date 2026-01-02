@@ -2,6 +2,8 @@
 
 interactive Next.js landing page featuring animated components, 3D portrait interaction, and a custom canvas-based space game background.
 
+![Space shooter preview](public/gifs/shoot.gif)
+
 ## Tech Stack
 
 - **Framework**: Next.js 15.4.5 with App Router
