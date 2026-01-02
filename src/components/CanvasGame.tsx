@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { logFirebaseEvent } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
+import { soundManager } from '@/lib/soundManager';
 
 interface Star {
   x: number;
@@ -76,6 +77,7 @@ export default function CanvasGame({
   targetGoal = 100,
   redirectPath = '/guestbook',
 }: CanvasGameProps) {
+  const [isMuted, setIsMuted] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number | null>(null);
   const redirectedRef = useRef(false);
@@ -96,6 +98,14 @@ export default function CanvasGame({
     killed: 0,
     totalTargetsSpawned: 0,
   });
+
+  useEffect(() => {
+    soundManager.setMuted(isMuted);
+  }, [isMuted]);
+
+  const handleToggleMute = useCallback(() => {
+    setIsMuted(prev => !prev);
+  }, []);
 
   // Vector math utilities
   const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -425,6 +435,7 @@ export default function CanvasGame({
                 // Boss destroyed
                 state.targets.splice(tIndex, 1);
                 state.killed += 1;
+                soundManager.playPop();
                 logFirebaseEvent('game_boss_destroyed', { total: state.killed });
                 // Spawn 10 new circles immediately
                 for (let i = 0; i < 10; i++) {
@@ -438,6 +449,7 @@ export default function CanvasGame({
               state.projectiles.splice(pIndex, 1);
               state.targets.splice(tIndex, 1);
               state.killed += 1;
+              soundManager.playPop();
               logFirebaseEvent('game_target_hit', { total: state.killed });
               // If we just destroyed the last circle, immediately spawn 4 new circles
               if (state.targets.length === 0) {
@@ -699,6 +711,7 @@ export default function CanvasGame({
 
   const handlePointerDown = useCallback(() => {
     if (mode === 'game') {
+      soundManager.unlock();
       gameStateRef.current.isShooting = true;
       logFirebaseEvent('game_shooting_start');
     }
@@ -787,14 +800,25 @@ export default function CanvasGame({
   }, [gameLoop, handlePointerMove, handlePointerDown, handlePointerUp, handleResize, initializeStars, mode]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="fixed inset-0 z-0"
-      style={{ 
+    <>
+      <button
+        type="button"
+        aria-pressed={!isMuted}
+        aria-label={isMuted ? 'Unmute sound effects' : 'Mute sound effects'}
+        onClick={handleToggleMute}
+        className="fixed top-4 right-4 z-20 rounded-full border border-white/20 bg-black/40 px-3 py-1 text-xs text-white backdrop-blur transition hover:bg-black/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+      >
+        {isMuted ? '🔇' : '🔊'}
+      </button>
+      <canvas
+        ref={canvasRef}
+        className="fixed inset-0 z-0"
+        style={{ 
   touchAction: 'none',
   background: '#212121',
   pointerEvents: mode === 'game' ? 'auto' : 'none',
-      }}
-    />
+        }}
+      />
+    </>
   );
 }
