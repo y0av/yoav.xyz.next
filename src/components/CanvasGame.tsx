@@ -427,6 +427,7 @@ export default function CanvasGame({
               target.hp = Math.max(0, target.hp - 1);
               target.hitFlash = 6; // short blink
               createExplosion(target.x, target.y);
+              soundManager.playBossHit();
               state.projectiles.splice(pIndex, 1);
               projectileConsumed = true;
               logFirebaseEvent('game_boss_hit', { hp: target.hp, maxHp: target.maxHp });

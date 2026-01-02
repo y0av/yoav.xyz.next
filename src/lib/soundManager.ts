@@ -1,8 +1,10 @@
 const POP_SOURCES = ['/sounds/k1.wav', '/sounds/k2.wav', '/sounds/k3.wav'];
+const HIT_SOURCE = '/sounds/hit.wav';
 
 type SoundManagerApi = {
   unlock: () => void;
   playPop: () => void;
+  playBossHit: () => void;
   setMuted: (muted: boolean) => void;
   toggleMute: () => boolean;
   isMuted: () => boolean;
@@ -12,6 +14,7 @@ class BrowserSoundManager implements SoundManagerApi {
   private audioCtx: AudioContext | null = null;
   private gainNode: GainNode | null = null;
   private popBuffers: AudioBuffer[] = [];
+  private hitBuffer: AudioBuffer | null = null;
   private loadingPromise: Promise<void> | null = null;
   private unlocked = false;
   private muted = false;
@@ -38,6 +41,28 @@ class BrowserSoundManager implements SoundManagerApi {
     const buffer = this.popBuffers[Math.floor(Math.random() * this.popBuffers.length)];
     const source = this.audioCtx.createBufferSource();
     source.buffer = buffer;
+    source.connect(this.gainNode);
+    try {
+      source.start();
+    } catch {
+      // Ignore playback errors (tab in background, etc.)
+    }
+  }
+
+  playBossHit() {
+    if (!this.unlocked || this.muted) return;
+    this.ensureContext();
+    this.resumeContext();
+
+    if (!this.hitBuffer) {
+      this.startLoadingBuffers();
+      return;
+    }
+
+    if (!this.audioCtx || !this.gainNode) return;
+
+    const source = this.audioCtx.createBufferSource();
+    source.buffer = this.hitBuffer;
     source.connect(this.gainNode);
     try {
       source.start();
@@ -83,33 +108,43 @@ class BrowserSoundManager implements SoundManagerApi {
   }
 
   private startLoadingBuffers() {
-    if (this.loadingPromise || this.popBuffers.length || !this.audioCtx) return;
+    if (this.loadingPromise || !this.audioCtx) return;
+    if (this.popBuffers.length && this.hitBuffer) return;
+
     const ctx = this.audioCtx;
-    this.loadingPromise = Promise.all(
-      POP_SOURCES.map(async src => {
-        const response = await fetch(src);
-        if (!response.ok) {
-          throw new Error(`Failed to load sound ${src}`);
-        }
-        const arrayBuffer = await response.arrayBuffer();
-        return ctx.decodeAudioData(arrayBuffer);
-      })
-    )
-      .then(buffers => {
-        this.popBuffers = buffers.filter((buffer): buffer is AudioBuffer => Boolean(buffer));
+    const loadPopBuffers = Promise.all(
+      POP_SOURCES.map(src => this.loadBuffer(ctx, src).catch(() => null))
+    );
+    const loadHitBuffer = this.loadBuffer(ctx, HIT_SOURCE).catch(() => null);
+
+    this.loadingPromise = Promise.all([loadPopBuffers, loadHitBuffer])
+      .then(([popBuffers, hitBuffer]) => {
+        this.popBuffers = popBuffers.filter((buffer): buffer is AudioBuffer => Boolean(buffer));
+        this.hitBuffer = hitBuffer;
       })
       .catch(() => {
         this.popBuffers = [];
+        this.hitBuffer = null;
       })
       .finally(() => {
         this.loadingPromise = null;
       });
+  }
+
+  private async loadBuffer(ctx: AudioContext, src: string) {
+    const response = await fetch(src);
+    if (!response.ok) {
+      throw new Error(`Failed to load sound ${src}`);
+    }
+    const arrayBuffer = await response.arrayBuffer();
+    return ctx.decodeAudioData(arrayBuffer);
   }
 }
 
 class NoopSoundManager implements SoundManagerApi {
   unlock() {}
   playPop() {}
+  playBossHit() {}
   setMuted() {}
   toggleMute() {
     return true;
