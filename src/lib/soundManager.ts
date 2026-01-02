@@ -1,5 +1,6 @@
 const POP_SOURCES = ['/sounds/k1.wav', '/sounds/k2.wav', '/sounds/k3.wav'];
 const HIT_SOURCE = '/sounds/hit.wav';
+const BASE_GAIN = 0.5;
 
 type SoundManagerApi = {
   unlock: () => void;
@@ -74,7 +75,7 @@ class BrowserSoundManager implements SoundManagerApi {
   setMuted(muted: boolean) {
     this.muted = muted;
     if (this.gainNode) {
-      this.gainNode.gain.value = muted ? 0 : 1;
+      this.gainNode.gain.value = muted ? 0 : BASE_GAIN;
     }
   }
 
@@ -96,7 +97,7 @@ class BrowserSoundManager implements SoundManagerApi {
     if (!AudioCtx) return;
     this.audioCtx = new AudioCtx();
     this.gainNode = this.audioCtx.createGain();
-    this.gainNode.gain.value = this.muted ? 0 : 1;
+    this.gainNode.gain.value = this.muted ? 0 : BASE_GAIN;
     this.gainNode.connect(this.audioCtx.destination);
   }
 
