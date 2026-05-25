@@ -7,7 +7,7 @@ import SocialIcons from '@/components/SocialIcons';
 
 export default function Home() {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gray-800">
+    <div className="app-screen relative overflow-hidden bg-gray-800">
       {/* Interactive Background Canvas */}
       <CanvasGame />
       
@@ -15,7 +15,7 @@ export default function Home() {
       <Logo />
       
       {/* Main content centered */}
-      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4">
+      <main className="app-screen relative z-10 flex flex-col items-center justify-center p-4">
         <div className="flex flex-col items-center justify-center space-y-6">
           {/* Greeting text */}
           <Greeting />

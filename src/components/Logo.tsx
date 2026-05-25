@@ -4,7 +4,10 @@ import Image from 'next/image';
 
 export default function Logo() {
   return (
-    <div className="fixed top-4 left-4 z-10 pointer-events-none">
+    <div
+      className="fixed left-4 z-10 pointer-events-none"
+      style={{ top: 'calc(var(--kao-banner-height, 0px) + 1rem)' }}
+    >
       <Image
         src="/logo.svg"
         alt="Logo"

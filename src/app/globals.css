@@ -3,6 +3,7 @@
 :root {
   --background: #212121;
   --foreground: #ededed;
+  --kao-banner-height: 0px;
 }
 
 body {
@@ -15,6 +16,11 @@ html, body {
   height: 100%;
   margin: 0;
   padding: 0;
+}
+
+.app-screen {
+  min-height: calc(100vh - var(--kao-banner-height));
+  min-height: calc(100dvh - var(--kao-banner-height));
 }
 
 /* Custom utilities for 3D perspective */

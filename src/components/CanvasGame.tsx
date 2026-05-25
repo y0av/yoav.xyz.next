@@ -103,6 +103,18 @@ export default function CanvasGame({
     soundManager.setMuted(isMuted);
   }, [isMuted]);
 
+  const getBannerHeight = useCallback(() => {
+    if (typeof window === 'undefined') {
+      return 0;
+    }
+
+    const bannerHeight = Number.parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue('--kao-banner-height'),
+    );
+
+    return Number.isFinite(bannerHeight) ? bannerHeight : 0;
+  }, []);
+
   const handleToggleMute = useCallback(() => {
     setIsMuted(prev => !prev);
   }, []);
@@ -728,8 +740,9 @@ export default function CanvasGame({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    const bannerHeight = getBannerHeight();
     canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.height = Math.max(window.innerHeight - bannerHeight, 0);
     
     // Re-initialize stars for new canvas size
     initializeStars(canvas);
@@ -741,15 +754,16 @@ export default function CanvasGame({
       gameStateRef.current.spaceship.targetX = canvas.width - 100;
       gameStateRef.current.spaceship.targetY = canvas.height - 100;
     }
-  }, [initializeStars, mode]);
+  }, [getBannerHeight, initializeStars, mode]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     // Set initial canvas size
+    const bannerHeight = getBannerHeight();
     canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.height = Math.max(window.innerHeight - bannerHeight, 0);
 
     // Initialize game state
     initializeStars(canvas);
@@ -798,7 +812,7 @@ export default function CanvasGame({
       
       window.removeEventListener('resize', handleResize);
     };
-  }, [gameLoop, handlePointerMove, handlePointerDown, handlePointerUp, handleResize, initializeStars, mode]);
+  }, [gameLoop, getBannerHeight, handlePointerMove, handlePointerDown, handlePointerUp, handleResize, initializeStars, mode]);
 
   return (
     <>
@@ -807,14 +821,16 @@ export default function CanvasGame({
         aria-pressed={!isMuted}
         aria-label={isMuted ? 'Unmute sound effects' : 'Mute sound effects'}
         onClick={handleToggleMute}
-        className="fixed top-4 right-4 z-20 rounded-full border border-white/20 bg-black/40 px-3 py-1 text-xs text-white backdrop-blur transition hover:bg-black/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+        className="fixed right-4 z-20 rounded-full border border-white/20 bg-black/40 px-3 py-1 text-xs text-white backdrop-blur transition hover:bg-black/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+        style={{ top: 'calc(var(--kao-banner-height, 0px) + 1rem)' }}
       >
         {isMuted ? '🔇' : '🔊'}
       </button>
       <canvas
         ref={canvasRef}
-        className="fixed inset-0 z-0"
+        className="fixed inset-x-0 bottom-0 z-0"
         style={{ 
+  top: 'var(--kao-banner-height, 0px)',
   touchAction: 'none',
   background: '#212121',
   pointerEvents: mode === 'game' ? 'auto' : 'none',

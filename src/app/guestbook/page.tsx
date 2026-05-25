@@ -80,11 +80,11 @@ export default function GuestbookPage() {
   };
 
   return (
-  <div className="relative min-h-screen overflow-y-auto bg-gray-800">
+  <div className="app-screen relative overflow-y-auto bg-gray-800">
       {/* Stars-only background */}
       <CanvasGame mode="starsOnly" />
 
-  <main className="relative z-10 flex items-center justify-center min-h-screen p-4">
+  <main className="app-screen relative z-10 flex items-center justify-center p-4">
   <div className="w-full max-w-3xl rounded-md bg-black/40 backdrop-blur border border-white/10 p-6 text-white">
           <div className="mb-6 flex flex-col gap-4 rounded-xl border border-white/15 bg-white/10 p-4 text-white shadow-md sm:flex-row sm:items-center">
             <div>

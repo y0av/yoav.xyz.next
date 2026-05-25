@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Roboto_Mono } from "next/font/google";
 import "./globals.css";
 import AnalyticsProvider from "@/components/AnalyticsProvider";
+import KeepAndroidOpenBanner from "@/components/KeepAndroidOpenBanner";
 import { Suspense } from "react";
 
 const robotoMono = Roboto_Mono({
@@ -25,10 +26,11 @@ export default function RootLayout({
       <body
         className={`${robotoMono.variable} antialiased font-mono`}
       >
-  <Suspense fallback={null}>
-    <AnalyticsProvider />
-  </Suspense>
-  {children}
+        <Suspense fallback={null}>
+          <AnalyticsProvider />
+        </Suspense>
+        <KeepAndroidOpenBanner />
+        {children}
       </body>
     </html>
   );

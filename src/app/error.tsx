@@ -8,7 +8,7 @@ export default function Error({
   reset: () => void;
 }) {
   return (
-    <div className="min-h-screen bg-gray-800 flex items-center justify-center">
+    <div className="app-screen bg-gray-800 flex items-center justify-center">
       <div className="text-center">
         <h1 className="text-6xl font-bold text-gray-100 mb-4">Error</h1>
         <p className="text-xl text-gray-300 mb-8">Something went wrong!</p>
