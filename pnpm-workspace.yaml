@@ -1,3 +1,5 @@
-ignoredBuiltDependencies:
-  - '@tailwindcss/oxide'
-  - sharp
+allowBuilds:
+  '@firebase/util': false
+  '@tailwindcss/oxide': false
+  protobufjs: false
+  sharp: false
