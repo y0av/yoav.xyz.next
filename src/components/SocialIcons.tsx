@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useState } from 'react';
 import { logFirebaseEvent } from '@/lib/firebase';
 
 const StackOverflowIcon = () => (
@@ -20,6 +21,16 @@ const EmailIcon = () => (
   </svg>
 );
 
+// Contact address stored as base64 of the reversed string so the literal address
+// (and even a bare "@") never appears in the HTML or the JS bundle for scrapers to
+// regex. It is reconstructed only in the browser, on a real user click.
+const ENCODED = 'bW9jLmxpYW16b21AdzdzczZiNHln';
+const decode = () => atob(ENCODED).split('').reverse().join('');
+
+// Shared icon styling so the email button/link looks identical to the other icons.
+const iconClass =
+  'text-gray-300 hover:text-blue-400 transition-all duration-300 hover:scale-110';
+
 export default function SocialIcons() {
   const socialLinks = [
     {
@@ -32,28 +43,73 @@ export default function SocialIcons() {
       icon: GitHubIcon,
       label: 'GitHub',
     },
-    {
-      href: 'mailto:gy4b6ss7w@mozmail.com',
-      icon: EmailIcon,
-      label: 'Email',
-    },
   ];
 
+  const [email, setEmail] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const revealEmail = () => {
+    const addr = decode();
+    setEmail(addr);
+    navigator.clipboard?.writeText(addr)
+      .then(() => {
+        setCopied(true);
+        if (copyTimer.current) clearTimeout(copyTimer.current);
+        copyTimer.current = setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => {});
+    window.location.href = `mailto:${addr}`;
+    logFirebaseEvent('social_click', { network: 'Email' });
+  };
+
   return (
-    <div className="flex gap-6 justify-center pointer-events-auto">
-      {socialLinks.map((link, index) => (
+    <div className="flex flex-col items-center gap-3 pointer-events-auto">
+      <div className="flex gap-6 justify-center">
+        {socialLinks.map((link, index) => (
+          <a
+            key={link.label}
+            href={link.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`${iconClass} animate-bounce-in animate-delay-${800 + index * 100}`}
+            aria-label={link.label}
+            onClick={() => logFirebaseEvent('social_click', { network: link.label, href: link.href })}
+          >
+            <link.icon />
+          </a>
+        ))}
+
+        {email ? (
+          <a
+            href={`mailto:${email}`}
+            target="_self"
+            className={`${iconClass} animate-bounce-in animate-delay-1000`}
+            aria-label={`Email ${email}`}
+          >
+            <EmailIcon />
+          </a>
+        ) : (
+          <button
+            type="button"
+            onClick={revealEmail}
+            className={`${iconClass} cursor-pointer bg-transparent border-0 p-0 animate-bounce-in animate-delay-1000`}
+            aria-label="Email"
+          >
+            <EmailIcon />
+          </button>
+        )}
+      </div>
+
+      {email && (
         <a
-          key={link.label}
-          href={link.href}
-          target={link.href.startsWith('mailto:') ? '_self' : '_blank'}
-          rel={link.href.startsWith('mailto:') ? undefined : 'noopener noreferrer'}
-          className={`text-gray-300 hover:text-blue-400 transition-all duration-300 hover:scale-110 animate-bounce-in animate-delay-${800 + index * 100}`}
-          aria-label={link.label}
-          onClick={() => logFirebaseEvent('social_click', { network: link.label, href: link.href })}
+          href={`mailto:${email}`}
+          className="text-sm text-blue-300 hover:text-blue-200 transition-colors select-all"
         >
-          <link.icon />
+          {email}
+          {copied && <span className="ml-2 text-green-400" aria-live="polite">copied ✓</span>}
         </a>
-      ))}
+      )}
     </div>
   );
 }
